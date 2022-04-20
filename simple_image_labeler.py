@@ -1,30 +1,30 @@
-""" Simple tool to label images for classification. 
+""" Simple tool to label images for classification.
     Use the keyboard to label images, moving them into sub-directories ready for training a classifier.
 
-    Usage: 
+    Usage:
       python label_images.py path_to_images
-  
+
     Directory structure:
-      The setup is simple: have a directory with images to label, and sub-directories in 
+      The setup is simple: have a directory with images to label, and sub-directories in
       that directory which are the labels. Files will be moved to those directories as you
       perform labeling.
-      
+
     Keyboard shortcuts:
       The keyboard shortcut when labeling is the first letter of the label name (or the first
-      unused letter if the first letter is already taken by another label). It's highlighted 
-      in brackets [] on the UI. You can also click on the UI buttons to label. 
-    
+      unused letter if the first letter is already taken by another label). It's highlighted
+      in brackets [] on the UI. You can also click on the UI buttons to label.
+
     Example directory structure:
       path_to_images=/home/myimages/ (contains img1.jpg, img2.jpg...)
           also contains sub directories which we turn into labels
             e.g. /home/myimages/cat/, /home/myimages/dog/ etc.
 
-    Example usage: 
+    Example usage:
       python label_images.py /home/myimages/
-      
+
     Dependencies:
       pip install tk
-      
+
     Marc Stogaitis
 """
 
@@ -59,6 +59,7 @@ def load_image_filenames(path):
   for (_, _, filenames) in walk(path):
       f.extend(filenames)
       break
+  f = [pic for pic in f if pic.endswith(".png") or pic.endswith(".jpg") or pic.endswith(".jpeg")]
   #f.sort()
   random.shuffle(f)
   return f
@@ -99,14 +100,22 @@ def change_img():
   photo_img = ImageTk.PhotoImage(img)
   panel.configure(image=photo_img)
   panel.image = photo_img
-  
+
 def on_btn_click(btn_idx):
   """ When a user labels an image """
   label = labels[btn_idx]
   img_filename = image_filenames[img_idx]
   percentage = "(" + str(round((img_idx + 1) / len(image_filenames), 2)) + "%)"
   print("Img", img_idx + 1, "of", len(image_filenames), percentage, "Moving", img_filename, "to label", label)
-  
+
+  # append csv
+  parts = img_filename.split("_")
+  serial = parts[0]
+  itr = parts[1].split(".")[0]
+  fname = os.path.splitext(img_filename.split(itr)[1])[0]
+  with open("results.csv", "a") as outcsv:
+    outcsv.write(",".join([serial, itr, fname, label])+"\n")
+
   new_img_filename = os.path.join(path, label, image_filenames[img_idx])
   os.rename(os.path.join(path, image_filenames[img_idx]), new_img_filename)
   change_img()
