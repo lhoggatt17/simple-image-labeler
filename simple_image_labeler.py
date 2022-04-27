@@ -32,6 +32,7 @@
 import os
 from os import walk
 import tkinter as tk
+from tkinter import ttk
 from tkinter import messagebox
 from PIL import ImageTk, Image
 import sys
@@ -42,6 +43,8 @@ img_idx = -1
 keyboard_shortcuts_indexed_by_letter = {}
 keyboard_shortcuts_indexed_by_idx = {}
 undo = []
+prevImage = None
+PREV_LABEL_START = "Previous label: "
 
 
 def load_labels(path):
@@ -95,12 +98,17 @@ window = tk.Tk()
 window.title("Simple Image Labeler")
 window.rowconfigure(0, minsize=700, weight=1)
 window.columnconfigure(1, minsize=700, weight=1)
-panel = tk.Label(window)
+panel = tk.Label(window, bg="#a8b8ff")
+prevPanel = tk.Label(window, bg="#ffd8a8")
+prevLabel = tk.Label(window, bg="#ffd8a8", font=(None, 16), text=PREV_LABEL_START)
 
 
-def change_img(decrement=False):
+def change_img(decrement=False, label=""):
     """ Go to the next image """
     global img_idx
+    global prevImage
+    global prevLabel
+
     if decrement:
         img_idx -= 1
     else:
@@ -123,10 +131,26 @@ def change_img(decrement=False):
     panel.configure(image=photo_img)
     panel.image = photo_img
 
+    if prevImage is not None:
+        prevPanel.configure(image=prevImage)
+        prevPanel.image = prevImage
+        prevLabel.configure(text=PREV_LABEL_START + label)
+
+    if decrement:
+        prevPanel.configure(image=None)
+        prevPanel.image = None
+        prevLabel.configure(text=PREV_LABEL_START)
+        prevImage = None
+
+    prevImage = photo_img
+
 
 def undo_click():
     global undo
     global img_idx
+    global prevImage
+    global prevLabel
+
     print("Trying to undo", undo)
     if len(undo) == 2:
         if os.path.isfile(undo[0]):
@@ -147,7 +171,7 @@ def on_btn_click(btn_idx):
     """ When a user labels an image """
     label = labels[btn_idx]
     img_filename = image_filenames[img_idx]
-    percentage = "(" + str(round(((img_idx + 1) / len(image_filenames))*100, 2)) + "%)"
+    percentage = "(" + str(round(((img_idx + 1) / len(image_filenames)) * 100, 2)) + "%)"
     print(
         "Img",
         img_idx + 1,
@@ -173,13 +197,13 @@ def on_btn_click(btn_idx):
     new_img_filename = os.path.join(path, label, image_filenames[img_idx])
     os.rename(os.path.join(path, image_filenames[img_idx]), new_img_filename)
     undo = [new_img_filename, os.path.join(path, image_filenames[img_idx])]
-    change_img()
+    change_img(label=label)
 
 
 def add_buttons():
     """ Add label buttons to the UI """
     fr_buttons = tk.Frame(window, relief=tk.RAISED, bd=2)
-    btn = tk.Button(fr_buttons, text="undo", command=undo_click)
+    btn = tk.Button(fr_buttons, font=(None, 14), text="undo", command=undo_click)
     btn.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
     col = 0
     row = 1
@@ -193,7 +217,12 @@ def add_buttons():
                     modified_label += letter
         else:
             modified_label = label
-        btn = tk.Button(fr_buttons, text=modified_label, command=lambda idx=i: on_btn_click(idx))
+        btn = tk.Button(
+            fr_buttons,
+            font=(None, 14),
+            text=modified_label,
+            command=lambda idx=i: on_btn_click(idx),
+        )
         btn.grid(row=row, column=col, sticky="ew", padx=5, pady=5)
         row += 1
         if row >= 10:
@@ -211,5 +240,12 @@ def handle_keypress(event):
 add_buttons()
 window.bind("<Key>", handle_keypress)
 change_img()
-panel.grid(row=0, column=1, sticky="nsew")
+panel.grid(row=0, column=1, sticky="nsew", rowspan=3)
+
+# ttk.Style().configure("Separator", background="#ffd8a8", padding=10)
+sep = ttk.Separator(window, orient="horizontal")
+sep.grid(column=1, row=4, sticky="ew")
+tk.Label(window, text="", bg="#ffd8a8").grid(row=5, column=1, sticky="ew")
+prevPanel.grid(row=6, column=1, sticky="nsew")
+prevLabel.grid(row=7, column=1, sticky="ew")
 window.mainloop()
